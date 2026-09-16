@@ -1,10 +1,1 @@
-# Enlace al video demo de PacFeed (3-5 minutos)
-
-[COMPLETAR con el enlace al video antes de entregar]
-
-El video debe mostrar, en este orden:
-1. La aplicación corriendo con una acción completa de principio a fin
-2. Los contenedores levantados (docker-compose ps)
-3. El bucket S3 y la instancia RDS en la consola de AWS
-4. El pipeline bloqueando (corrida roja)
-5. El pipeline permitiendo (corrida verde)
+https://youtu.be/53REV3dODJM

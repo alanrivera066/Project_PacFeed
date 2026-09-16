@@ -8,42 +8,52 @@ Proyecto académico individual (LSCA2314). El objetivo es cumplir los requisitos
 
 ### Backend: Flask (no FastAPI)
 
-**Elegido porque:** Flask es más simple para un proyecto pequeño sin schemas complejos. No necesitamos validación automática de tipos ni documentación OpenAPI autogenerada — eso agregaría complejidad sin valor para la rúbrica.
+Se utilizó Flask para mantener el proyecto simple. FastAPI tiene beneficios como generación automática de documentación, pero agrega complejidad que no aporta valor para un proyecto de este tamaño.
 
-**Descartado:** FastAPI — más potente pero más boilerplate para lo que necesitamos.
+**Descartado:** FastAPI.
+
+---
 
 ### Base de datos: psycopg2 directo (no ORM)
 
-**Elegido porque:** Son 4 tablas simples. Un ORM (SQLAlchemy) agregaría una capa de abstracción innecesaria y más dependencias.
+Se utilizó psycopg2 porque la aplicación solo tiene cuatro tablas simples. SQLAlchemy, a pesar de sus beneficios como generar SQL automáticamente, no aporta mucho valor a un proyecto de este calibre.
 
-**Descartado:** SQLAlchemy, tortoise-orm.
+**Descartado:** SQLAlchemy.
+
+---
 
 ### Autenticación: X-User-Id en header (no JWT)
 
-**Elegido porque:** La rúbrica pide "registro e inicio de sesión simples — no necesita ser sofisticado". JWT agrega complejidad (expiración, refresh tokens, firma) que no aporta puntos.
+Para el inicio de sesión no se utilizó otra manera más que después del login el servidor devuelva un user_id para que el cliente lo agregue en cada petición. Se maneja de esta manera para mantenerlo simple y sin tanta complejidad.
 
 **Descartado:** JWT, Flask-Login, sesiones con cookies.
 
-### Contraseñas: SHA-256 (no bcrypt)
-
-**Elegido porque:** Es un proyecto académico en un entorno de lab. bcrypt sería mejor para producción, pero agrega una dependencia extra.
-
-**Nota:** En producción real se usaría bcrypt o argon2.
+---
 
 ### Caché: Redis con invalidación simple
 
-**Elegido porque:** La pieza técnica obligatoria del tema 2 es Redis. La invalidación se hace borrando la clave del feed cuando hay contenido nuevo — simple y funcional.
+Redis corre en su propio contenedor separado de la API. Cuando alguien pide su feed, la app primero revisa si está en Redis — si está lo devuelve directo (from_cache: true), si no está va a RDS y guarda el resultado en Redis para la próxima vez. El caché se invalida cuando alguien a quien sigues publica algo nuevo. Esta estrategia cumple con el requisito de que se note que sirve desde caché cuando puede, sin necesidad de ser sofisticado.
 
-**Descartado:** Invalidación por TTL únicamente (no demuestra que el caché sirve el feed), estrategias de write-through (más complejo).
+---
 
 ### Orquestación: docker-compose (no Kubernetes)
 
-**Elegido porque:** La rúbrica dice explícitamente que docker-compose es el piso obligatorio y Kubernetes es opcional y arriesgado por memoria. No se arriesga la entrega por un bono.
+Se decidió utilizar docker-compose por la memoria limitada que tiene la instancia dentro del Learner Lab. Kubernetes es opcional en la rúbrica y arriesgar la entrega por un punto extra no vale la pena.
+
+**Descartado:** Kubernetes (k3s, minikube).
+
+---
 
 ### IaC: Terraform (no CloudFormation)
 
-**Elegido porque:** Terraform es la herramienta usada en el curso y tiene mejor soporte en el pipeline con checkov.
+Terraform es la herramienta usada en el curso y tiene mejor soporte en el pipeline con checkov.
+
+**Descartado:** CloudFormation.
+
+---
 
 ### Pipeline: script bash (no Jenkins ni GitHub Actions)
 
-**Elegido porque:** Para correr el pipeline manualmente en la EC2 y generar las corridas roja y verde, un script bash es suficiente y no requiere configurar infraestructura adicional.
+Se decidió utilizar un script bash para generar las corridas roja y verde y posteriormente guardarlas en la carpeta de reportes, antes que instalar Jenkins u otro servidor para manejar el pipeline. Se mantiene la simplicidad sin necesidad de infraestructura adicional.
+
+**Descartado:** Jenkins, GitHub Actions.
