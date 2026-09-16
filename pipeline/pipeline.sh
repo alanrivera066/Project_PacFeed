@@ -95,12 +95,12 @@ fi
 separador "VEREDICTO FINAL"
 if [ "$resultado_global" -eq "$PASS" ]; then
   echo ""
-  echo "  ✅  PERMITE — todas las etapas pasaron"
+  echo "  ✅  PERMITIDO — todas las etapas pasaron"
   echo ""
   exit 0
 else
   echo ""
-  echo "  ❌  BLOQUEA — una o más etapas fallaron (ver arriba)"
+  echo "  ❌  BLOQUEADO — una o más etapas fallaron (ver arriba)"
   echo ""
   exit 1
 fi
