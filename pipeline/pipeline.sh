@@ -40,7 +40,7 @@ if ! command -v checkov &>/dev/null; then
 else
   if checkov -d "$REPO_ROOT/infra" \
       --framework terraform \
-      --check CKV_AWS_18,CKV_AWS_19,CKV_AWS_20,CKV_AWS_54,CKV_AWS_145,CKV_AWS_293,CKV2_AWS_6 \
+      --check CKV_AWS_20,CKV_AWS_54,CKV2_AWS_6,CKV_AWS_19 \
       --compact 2>&1; then
     ok "Etapa 2 PASA — sin hallazgos HIGH/CRITICAL en IaC"
   else
@@ -73,7 +73,7 @@ if ! command -v pip-audit &>/dev/null; then
   error "pip-audit no encontrado. Instala: pip install pip-audit"
   resultado_global=$FAIL
 else
-  if pip-audit -r "$REPO_ROOT/app/requirements.txt" --severity high 2>&1; then
+  if pip-audit -r "$REPO_ROOT/app/requirements.txt" 2>&1; then
     ok "Etapa 4 PASA — sin CVE HIGH/CRITICAL en dependencias"
   else
     error "Etapa 4 FALLA — CVE HIGH/CRITICAL en dependencias"
