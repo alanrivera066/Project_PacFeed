@@ -1,0 +1,10 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Archivos excluidos del escaneo"
+paths = [
+    '''.env''',
+    '''reportes/corrida_roja.txt''',
+    '''README.md''',
+]

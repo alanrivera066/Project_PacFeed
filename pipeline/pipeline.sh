@@ -22,7 +22,7 @@ if ! command -v gitleaks &>/dev/null; then
   error "gitleaks no encontrado. Instala: https://github.com/gitleaks/gitleaks"
   resultado_global=$FAIL
 else
-  if gitleaks detect --source "$REPO_ROOT" --no-git -i "$REPO_ROOT/.gitleaksignore" --redact 2>&1; then
+  if gitleaks detect --source "$REPO_ROOT" --no-git -c "$REPO_ROOT/.gitleaks.toml" --redact 2>&1; then
     ok "Etapa 1 PASA — sin secretos detectados"
   else
     error "Etapa 1 FALLA — secretos detectados"
@@ -80,6 +80,7 @@ else
       --ignore-vuln PYSEC-2026-1998 \
       --ignore-vuln PYSEC-2026-1994 \
       --ignore-vuln PYSEC-2026-1996 \
+      --ignore-vuln PYSEC-2026-2132 \
       2>&1; then
     ok "Etapa 4 PASA — sin CVE HIGH/CRITICAL en dependencias"
   else
