@@ -22,7 +22,7 @@ if ! command -v gitleaks &>/dev/null; then
   error "gitleaks no encontrado. Instala: https://github.com/gitleaks/gitleaks"
   resultado_global=$FAIL
 else
-  if gitleaks detect --source "$REPO_ROOT" --no-git --ignore-path "$REPO_ROOT/.gitleaksignore" --redact 2>&1; then
+  if gitleaks detect --source "$REPO_ROOT" --no-git -i "$REPO_ROOT/.gitleaksignore" --redact 2>&1; then
     ok "Etapa 1 PASA — sin secretos detectados"
   else
     error "Etapa 1 FALLA — secretos detectados"

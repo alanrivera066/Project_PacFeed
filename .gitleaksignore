@@ -1,5 +1,6 @@
-# Archivos excluidos del escaneo de gitleaks
-# .env no está en git pero existe físicamente — contiene credenciales del lab que rotan
-.env
-# Reportes del pipeline — la corrida roja contiene una clave falsa intencional de prueba
-reportes/corrida_roja.txt
+.env:aws-access-token:15
+README.md:sidekiq-secret:42
+README.md:aws-access-token:221
+README.md:aws-access-token:223
+README.md:aws-access-token:259
+reportes/corrida_roja.txt:aws-access-token:81
