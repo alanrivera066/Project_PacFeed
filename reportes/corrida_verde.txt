@@ -1,3 +1,94 @@
-# COMPLETAR — Pegar aquí la salida completa del pipeline cuando permite.
-# Para generarla después de remediar:
-# bash pipeline/pipeline.sh 2>&1 | tee reportes/corrida_verde.txt
+
+======================================
+  ETAPA 1: Secretos — gitleaks
+======================================
+
+    ○
+    │╲
+    │ ○
+    ○ ░
+    ░    gitleaks
+
+[90m5:24AM[0m [32mINF[0m scan completed in 20.4ms
+[90m5:24AM[0m [32mINF[0m no leaks found
+[OK]    Etapa 1 PASA — sin secretos detectados
+
+======================================
+  ETAPA 2: IaC — checkov
+======================================
+
+       _               _
+   ___| |__   ___  ___| | _______   __
+  / __| '_ \ / _ \/ __| |/ / _ \ \ / /
+ | (__| | | |  __/ (__|   < (_) \ V /
+  \___|_| |_|\___|\___|_|\_\___/ \_/
+
+By Prisma Cloud | version: 3.3.17 
+
+terraform scan results:
+
+Passed checks: 4, Failed checks: 0, Skipped checks: 0
+
+Check: CKV_AWS_54: "Ensure S3 bucket has block public policy enabled"
+	PASSED for resource: aws_s3_bucket_public_access_block.pacfeed
+	File: /main.tf:44-50
+	Guide: https://docs.prismacloud.io/en/enterprise-edition/policy-reference/aws-policies/s3-policies/bc-aws-s3-20
+Check: CKV_AWS_20: "S3 Bucket has an ACL defined which allows public READ access."
+	PASSED for resource: aws_s3_bucket.pacfeed
+	File: /main.tf:36-40
+	Guide: https://docs.prismacloud.io/en/enterprise-edition/policy-reference/aws-policies/s3-policies/s3-1-acl-read-permissions-everyone
+Check: CKV2_AWS_6: "Ensure that S3 bucket has a Public Access block"
+	PASSED for resource: aws_s3_bucket.pacfeed
+	File: /main.tf:36-40
+	Guide: https://docs.prismacloud.io/en/enterprise-edition/policy-reference/aws-policies/aws-networking-policies/s3-bucket-should-have-public-access-blocks-defaults-to-false-if-the-public-access-block-is-not-attached
+Check: CKV_AWS_19: "Ensure all data stored in the S3 bucket is securely encrypted at rest"
+	PASSED for resource: aws_s3_bucket.pacfeed
+	File: /main.tf:36-40
+	Guide: https://docs.prismacloud.io/en/enterprise-edition/policy-reference/aws-policies/s3-policies/s3-14-data-encrypted-at-rest
+
+[OK]    Etapa 2 PASA — sin hallazgos HIGH/CRITICAL en IaC
+
+======================================
+  ETAPA 3: SAST — bandit
+======================================
+[main]	INFO	profile include tests: None
+[main]	INFO	profile exclude tests: None
+[main]	INFO	cli include tests: None
+[main]	INFO	cli exclude tests: None
+[main]	INFO	running on Python 3.9.25
+Run started:2026-09-16 05:24:36.127584
+
+Test results:
+	No issues identified.
+
+Code scanned:
+	Total lines of code: 237
+	Total lines skipped (#nosec): 0
+	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 0
+
+Run metrics:
+	Total issues (by severity):
+		Undefined: 0
+		Low: 0
+		Medium: 1
+		High: 0
+	Total issues (by confidence):
+		Undefined: 0
+		Low: 0
+		Medium: 1
+		High: 0
+Files skipped (0):
+[OK]    Etapa 3 PASA — sin hallazgos HIGH en el código
+
+======================================
+  ETAPA 4: Dependencias — pip-audit
+======================================
+No known vulnerabilities found, 6 ignored
+[OK]    Etapa 4 PASA — sin CVE HIGH/CRITICAL en dependencias
+
+======================================
+  VEREDICTO FINAL
+======================================
+
+  ✅  PERMITE — todas las etapas pasaron
+
