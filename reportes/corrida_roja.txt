@@ -1,5 +1,124 @@
-# COMPLETAR — Pegar aquí la salida completa del pipeline cuando bloquea.
-# Para generarla:
-# 1. Introduce un secreto de prueba en el código (ej. una clave hardcodeada)
-# 2. Corre: bash pipeline/pipeline.sh 2>&1 | tee reportes/corrida_roja.txt
-# 3. Quita el secreto de prueba y genera la corrida verde.
+
+======================================
+  ETAPA 1: Secretos — gitleaks
+======================================
+
+    ○
+    │╲
+    │ ○
+    ○ ░
+    ░    gitleaks
+
+[90m4:47AM[0m [32mINF[0m scan completed in 34.2ms
+[90m4:47AM[0m [31mWRN[0m leaks found: 6
+[ERROR] Etapa 1 FALLA — secretos detectados
+
+======================================
+  ETAPA 2: IaC — checkov
+======================================
+
+       _               _
+   ___| |__   ___  ___| | _______   __
+  / __| '_ \ / _ \/ __| |/ / _ \ \ / /
+ | (__| | | |  __/ (__|   < (_) \ V /
+  \___|_| |_|\___|\___|_|\_\___/ \_/
+
+By Prisma Cloud | version: 3.3.17 
+
+terraform scan results:
+
+Passed checks: 4, Failed checks: 3, Skipped checks: 0
+
+Check: CKV_AWS_54: "Ensure S3 bucket has block public policy enabled"
+	PASSED for resource: aws_s3_bucket_public_access_block.pacfeed
+	File: /main.tf:44-50
+	Guide: https://docs.prismacloud.io/en/enterprise-edition/policy-reference/aws-policies/s3-policies/bc-aws-s3-20
+Check: CKV_AWS_20: "S3 Bucket has an ACL defined which allows public READ access."
+	PASSED for resource: aws_s3_bucket.pacfeed
+	File: /main.tf:36-40
+	Guide: https://docs.prismacloud.io/en/enterprise-edition/policy-reference/aws-policies/s3-policies/s3-1-acl-read-permissions-everyone
+Check: CKV2_AWS_6: "Ensure that S3 bucket has a Public Access block"
+	PASSED for resource: aws_s3_bucket.pacfeed
+	File: /main.tf:36-40
+	Guide: https://docs.prismacloud.io/en/enterprise-edition/policy-reference/aws-policies/aws-networking-policies/s3-bucket-should-have-public-access-blocks-defaults-to-false-if-the-public-access-block-is-not-attached
+Check: CKV_AWS_19: "Ensure all data stored in the S3 bucket is securely encrypted at rest"
+	PASSED for resource: aws_s3_bucket.pacfeed
+	File: /main.tf:36-40
+	Guide: https://docs.prismacloud.io/en/enterprise-edition/policy-reference/aws-policies/s3-policies/s3-14-data-encrypted-at-rest
+Check: CKV_AWS_293: "Ensure that AWS database instances have deletion protection enabled"
+	FAILED for resource: aws_db_instance.pacfeed
+	File: /main.tf:111-129
+	Guide: https://docs.prismacloud.io/en/enterprise-edition/policy-reference/aws-policies/aws-general-policies/bc-aws-293
+Check: CKV_AWS_18: "Ensure the S3 bucket has access logging enabled"
+	FAILED for resource: aws_s3_bucket.pacfeed
+	File: /main.tf:36-40
+	Guide: https://docs.prismacloud.io/en/enterprise-edition/policy-reference/aws-policies/s3-policies/s3-13-enable-logging
+Check: CKV_AWS_145: "Ensure that S3 buckets are encrypted with KMS by default"
+	FAILED for resource: aws_s3_bucket.pacfeed
+	File: /main.tf:36-40
+	Guide: https://docs.prismacloud.io/en/enterprise-edition/policy-reference/aws-policies/aws-general-policies/ensure-that-s3-buckets-are-encrypted-with-kms-by-default
+
+[ERROR] Etapa 2 FALLA — hallazgos HIGH/CRITICAL en IaC
+
+======================================
+  ETAPA 3: SAST — bandit
+======================================
+[main]	INFO	profile include tests: None
+[main]	INFO	profile exclude tests: None
+[main]	INFO	cli include tests: None
+[main]	INFO	cli exclude tests: None
+[main]	INFO	running on Python 3.9.25
+Run started:2026-09-16 04:47:53.620578
+
+Test results:
+>> Issue: [B104:hardcoded_bind_all_interfaces] Possible binding to all interfaces.
+   Severity: Medium   Confidence: Medium
+   CWE: CWE-605 (https://cwe.mitre.org/data/definitions/605.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b104_hardcoded_bind_all_interfaces.html
+   Location: /home/ec2-user/Project_PacFeed/app/app.py:302:17
+301	    init_db()
+302	    app.run(host="0.0.0.0", port=5000)
+303	AWS_SECRET_ACCESS_KEY="AKIAIOSFODNN7EXAMPLE/wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+
+--------------------------------------------------
+
+Code scanned:
+	Total lines of code: 238
+	Total lines skipped (#nosec): 0
+	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 0
+
+Run metrics:
+	Total issues (by severity):
+		Undefined: 0
+		Low: 1
+		Medium: 1
+		High: 0
+	Total issues (by confidence):
+		Undefined: 0
+		Low: 0
+		Medium: 2
+		High: 0
+Files skipped (0):
+[ERROR] Etapa 3 FALLA — hallazgos HIGH en el código
+
+======================================
+  ETAPA 4: Dependencias — pip-audit
+======================================
+usage: pip-audit [-h] [-V] [-l] [-r REQUIREMENT] [--locked] [-f FORMAT]
+                 [-s SERVICE] [-d] [-S] [--desc [{on,off,auto}]]
+                 [--aliases [{on,off,auto}]] [--cache-dir CACHE_DIR]
+                 [--progress-spinner {on,off}] [--timeout TIMEOUT]
+                 [--path PATH] [-v] [--fix] [--require-hashes]
+                 [--index-url INDEX_URL] [--extra-index-url URL]
+                 [--skip-editable] [--no-deps] [-o FILE] [--ignore-vuln ID]
+                 [--disable-pip]
+                 [project_path]
+pip-audit: error: argument project_path: not allowed with argument -r/--requirement
+[ERROR] Etapa 4 FALLA — CVE HIGH/CRITICAL en dependencias
+
+======================================
+  VEREDICTO FINAL
+======================================
+
+  ❌  BLOQUEA — una o más etapas fallaron (ver arriba)
+
