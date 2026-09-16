@@ -9,8 +9,8 @@
     ○ ░
     ░    gitleaks
 
-[90m5:24AM[0m [32mINF[0m scan completed in 20.4ms
-[90m5:24AM[0m [32mINF[0m no leaks found
+[90m11:56PM[0m [32mINF[0m scan completed in 35.6ms
+[90m11:56PM[0m [32mINF[0m no leaks found
 [OK]    Etapa 1 PASA — sin secretos detectados
 
 ======================================
@@ -56,7 +56,7 @@ Check: CKV_AWS_19: "Ensure all data stored in the S3 bucket is securely encrypte
 [main]	INFO	cli include tests: None
 [main]	INFO	cli exclude tests: None
 [main]	INFO	running on Python 3.9.25
-Run started:2026-09-16 05:24:36.127584
+Run started:2026-09-16 23:57:04.664698
 
 Test results:
 	No issues identified.
@@ -90,5 +90,5 @@ No known vulnerabilities found, 6 ignored
   VEREDICTO FINAL
 ======================================
 
-  ✅  PERMITE — todas las etapas pasaron
+  ✅  PERMITIDO — todas las etapas pasaron
 
