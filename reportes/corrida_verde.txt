@@ -1,0 +1,3 @@
+# COMPLETAR — Pegar aquí la salida completa del pipeline cuando permite.
+# Para generarla después de remediar:
+# bash pipeline/pipeline.sh 2>&1 | tee reportes/corrida_verde.txt

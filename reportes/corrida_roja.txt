@@ -1,0 +1,5 @@
+# COMPLETAR — Pegar aquí la salida completa del pipeline cuando bloquea.
+# Para generarla:
+# 1. Introduce un secreto de prueba en el código (ej. una clave hardcodeada)
+# 2. Corre: bash pipeline/pipeline.sh 2>&1 | tee reportes/corrida_roja.txt
+# 3. Quita el secreto de prueba y genera la corrida verde.

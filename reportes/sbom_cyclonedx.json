@@ -1,0 +1,3 @@
+# COMPLETAR — Generar con:
+# pip install cyclonedx-bom
+# cyclonedx-py requirements app/requirements.txt -o reportes/sbom_cyclonedx.json
