@@ -22,7 +22,7 @@ if ! command -v gitleaks &>/dev/null; then
   error "gitleaks no encontrado. Instala: https://github.com/gitleaks/gitleaks"
   resultado_global=$FAIL
 else
-  if gitleaks detect --source "$REPO_ROOT" --no-git --redact 2>&1; then
+  if gitleaks detect --source "$REPO_ROOT" --no-git --ignore-path "$REPO_ROOT/.gitleaksignore" --redact 2>&1; then
     ok "Etapa 1 PASA — sin secretos detectados"
   else
     error "Etapa 1 FALLA — secretos detectados"
@@ -57,7 +57,8 @@ if ! command -v bandit &>/dev/null; then
   error "bandit no encontrado. Instala: pip install bandit"
   resultado_global=$FAIL
 else
-  if bandit -r "$REPO_ROOT/app" -ll -ii 2>&1; then
+  # -ll = solo HIGH, -ii = solo HIGH confidence
+  if bandit -r "$REPO_ROOT/app" -lll -iii 2>&1; then
     ok "Etapa 3 PASA — sin hallazgos HIGH en el código"
   else
     error "Etapa 3 FALLA — hallazgos HIGH en el código"

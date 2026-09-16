@@ -1,0 +1,5 @@
+# Archivos excluidos del escaneo de gitleaks
+# .env no está en git pero existe físicamente — contiene credenciales del lab que rotan
+.env
+# Reportes del pipeline — la corrida roja contiene una clave falsa intencional de prueba
+reportes/corrida_roja.txt
