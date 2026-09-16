@@ -34,8 +34,9 @@ variable "ec2_sg_id" {
 # ---------------------------------------------------------------------------
 
 resource "aws_s3_bucket" "pacfeed" {
-  bucket        = "pacfeed-media-${data.aws_caller_identity.current.account_id}"
-  force_destroy = true
+  bucket              = "pacfeed-media-${data.aws_caller_identity.current.account_id}"
+  force_destroy       = true
+  object_lock_enabled = false
 }
 
 data "aws_caller_identity" "current" {}
