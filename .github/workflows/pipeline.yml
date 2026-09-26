@@ -140,7 +140,7 @@ jobs:
         run: docker build -t pacfeed:${{ github.sha }} .
 
       - name: Confirmar build
-        run: echo "✅ Imagen construida: pacfeed:${{ github.sha }}"
+        run: echo "Imagen construida correctamente - ${{ github.sha }}"
 
   # ─────────────────────────────────────────────
   # DEPLOY a QA: solo en push, tras build exitoso
@@ -163,20 +163,7 @@ jobs:
 
       - name: Deploy en instancia QA
         run: |
-          ssh -i ~/.ssh/id_rsa ${{ secrets.QA_USER }}@${{ secrets.QA_HOST }} << 'ENDSSH'
-            set -e
-            echo "=== Actualizando código ==="
-            cd ~/pacfeed || git clone ${{ github.server_url }}/${{ github.repository }} ~/pacfeed && cd ~/pacfeed
-            git pull origin ${{ github.ref_name }}
-
-            echo "=== Reconstruyendo contenedores ==="
-            docker compose down
-            docker compose up -d --build
-
-            echo "=== Verificando salud ==="
-            sleep 10
-            curl -f http://localhost:5000/salud && echo "✅ Deploy QA exitoso"
-          ENDSSH
+          ssh -i ~/.ssh/id_rsa ${{ secrets.QA_USER }}@${{ secrets.QA_HOST }} "cd ~/pacfeed && git pull origin ${{ github.ref_name }} && docker compose down && docker compose up -d --build && sleep 10 && curl -f http://localhost:5000/salud && echo 'Deploy QA exitoso'"
 
       - name: Confirmar deploy
-        run: echo "✅ Deploy completado en QA — ${{ secrets.QA_HOST }}"
+        run: echo "Deploy completado en QA - ${{ secrets.QA_HOST }}"
