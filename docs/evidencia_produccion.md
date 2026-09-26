@@ -1,8 +1,10 @@
 # Evidencia de Producción
 
 **Proyecto:** PacFeed — Red social de formato corto  
-**Instancia de Producción:** [COMPLETAR — IP pública de la instancia nueva]  
-**Fecha de deploy:** [COMPLETAR]
+**Instancia de Producción:** 32.197.202.120 (i-0d8539d708128ef2c)  
+**URL:** http://32.197.202.120:5000  
+**Repositorio de Producción:** https://github.com/alanrivera066/Project_PacFeed_Prod  
+**Fecha de deploy:** 25 de septiembre de 2026
 
 ---
 
@@ -23,10 +25,21 @@
 ## Instancia de Producción
 
 - **Nombre:** pacfeed-prod
-- **IP pública:** [COMPLETAR tras crear la instancia]
-- **AMI utilizada:** [COMPLETAR — misma que QA para consistencia]
+- **Instance ID:** i-0d8539d708128ef2c
+- **IP pública:** 32.197.202.120
+- **AMI utilizada:** ami-05dee78f58650ed2c (Amazon Linux 2023, misma que QA)
 - **Tipo:** t3.micro
-- **Región:** us-east-1
+- **Región:** us-east-1 (us-east-1a)
+
+## Verificación funcional realizada
+
+Se comprobó por API sobre la instancia de Producción:
+
+- `GET /salud` → `{"estado": "ok"}`
+- Registro de usuario → OK
+- Publicación → OK
+- Búsqueda por usuario (`GET /publicaciones/buscar?usuario=...`) → devuelve resultados correctos
+- Intento de inyección SQL (`usuario=' OR '1'='1`) → devuelve 0 resultados, confirmando que la falla remediada NO está presente en Producción
 
 ---
 
