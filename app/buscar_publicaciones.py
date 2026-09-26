@@ -1,16 +1,21 @@
 """
-PARCHE - Nueva funcionalidad: buscar publicaciones por nombre de usuario
+Funcionalidad: buscar publicaciones por nombre de usuario
 Tema: Red social de formato corto
 
-Producto pide: dentro del feed, un cuadro de busqueda que permita encontrar
-las publicaciones de un usuario especifico por su nombre. Integra este
-endpoint en tu API (usa tu misma conexion a RDS).
+REMEDIACION aplicada (CWE-89 - SQL Injection):
+  - Se reemplazo la concatenacion de strings por consulta parametrizada.
+  - psycopg2 escapa automaticamente el valor del parametro antes de enviarlo
+    a PostgreSQL, eliminando la posibilidad de inyeccion SQL.
+  - Se agrego validacion de longitud maxima para descartar entradas invalidas.
 """
 from flask import Blueprint, request, jsonify
 import os
 import psycopg2
 
 buscar_bp = Blueprint("buscar", __name__)
+
+# Longitud maxima permitida para el nombre de usuario
+MAX_USUARIO_LEN = 50
 
 
 def obtener_conexion():
@@ -27,17 +32,26 @@ def obtener_conexion():
 @buscar_bp.route("/publicaciones/buscar", methods=["GET"])
 def buscar_por_usuario():
     """Devuelve las publicaciones de un usuario dado su nombre."""
-    nombre_usuario = request.args.get("usuario", "")
+    nombre_usuario = request.args.get("usuario", "").strip()
 
+    # Validacion de entrada - descarta valores vacios o demasiado largos
+    if not nombre_usuario:
+        return jsonify({"error": "El parametro 'usuario' es requerido"}), 400
+
+    if len(nombre_usuario) > MAX_USUARIO_LEN:
+        return jsonify({"error": f"El nombre de usuario no puede superar {MAX_USUARIO_LEN} caracteres"}), 400
+
+    # REMEDIACION: consulta parametrizada - el valor nunca se interpola
+    # directamente en el string SQL. psycopg2 lo envia como dato separado.
     consulta = (
         "SELECT id, contenido, fecha_creacion FROM publicaciones "
-        "WHERE usuario = '" + nombre_usuario + "' "
+        "WHERE usuario = %s "
         "ORDER BY fecha_creacion DESC LIMIT 20"
     )
 
     conexion = obtener_conexion()
     cur = conexion.cursor()
-    cur.execute(consulta)
+    cur.execute(consulta, (nombre_usuario,))  # parametro seguro
     rows = cur.fetchall()
     cur.close()
     conexion.close()
