@@ -1,0 +1,48 @@
+================================================================================
+PIPELINE BLOQUEADO — Corrida que detuvo el parche vulnerable
+Proyecto: PacFeed — Red social de formato corto (Tema 2)
+Pipeline: GitHub Actions (.github/workflows/pipeline.yml)
+Commit: parche integrado sin remediar (buscar_publicaciones.py con SQL Injection)
+================================================================================
+
+VEREDICTO: BLOQUEADO — la etapa de SAST (bandit) detuvo el despliegue.
+
+--------------------------------------------------------------------------------
+RESULTADO POR ETAPA
+--------------------------------------------------------------------------------
+[✓] Etapa 1 — Secretos (gitleaks) ............... PASA (sin secretos detectados)
+[✓] Etapa 2 — IaC (checkov) ..................... PASA (4 checks, 0 fallos)
+[✗] Etapa 3 — SAST (bandit) ..................... FALLA (hallazgo MEDIUM)
+[-] Etapa 4 — Dependencias (pip-audit) .......... no bloqueante
+[-] Build Docker ................................ BLOQUEADO (no se ejecuta)
+[-] Deploy a QA ................................. BLOQUEADO (no se ejecuta)
+
+--------------------------------------------------------------------------------
+HALLAZGO QUE DETUVO EL PIPELINE (salida de bandit)
+--------------------------------------------------------------------------------
+>> Issue: [B608:hardcoded_sql_expressions] Possible SQL injection vector
+   through string-based query construction.
+   Severity: Medium   Confidence: Low
+   CWE: CWE-89 (https://cwe.mitre.org/data/definitions/89.html)
+   More Info: https://bandit.readthedocs.io/en/1.7.9/plugins/b608_hardcoded_sql_expressions.html
+   Location: app/buscar_publicaciones.py:33:8
+
+32      consulta = (
+33          "SELECT id, contenido, fecha_creacion FROM publicaciones "
+34          "WHERE usuario = '" + nombre_usuario + "' "
+35          "ORDER BY fecha_creacion DESC LIMIT 20"
+36      )
+
+--------------------------------------------------------------------------------
+Run metrics:
+    Total issues (by severity):
+        Medium: 1
+        High: 0
+--------------------------------------------------------------------------------
+
+Error: Process completed with exit code 1
+
+El control de análisis estático (bandit) detectó la inyección SQL introducida
+por el parche y detuvo el pipeline antes de construir la imagen o desplegar.
+El código vulnerable NUNCA llegó a la instancia de QA ni a Producción.
+================================================================================

@@ -1,0 +1,58 @@
+================================================================================
+PIPELINE EN VERDE — Corrida con el código ya remediado
+Proyecto: PacFeed — Red social de formato corto (Tema 2)
+Pipeline: GitHub Actions (.github/workflows/pipeline.yml)
+Commit de remediación: SQL Injection corregida con consulta parametrizada (CWE-89)
+================================================================================
+
+VEREDICTO: PERMITIDO — las 4 etapas de seguridad pasaron, se construyó la
+imagen y se desplegó a la instancia de QA.
+
+--------------------------------------------------------------------------------
+RESULTADO POR ETAPA
+--------------------------------------------------------------------------------
+[✓] Etapa 1 — Secretos (gitleaks) ............... PASA (sin secretos detectados)
+[✓] Etapa 2 — IaC (checkov) ..................... PASA (4 checks, 0 fallos)
+[✓] Etapa 3 — SAST (bandit) ..................... PASA (No issues identified)
+[✓] Etapa 4 — Dependencias (pip-audit) .......... PASA (sin CVE HIGH/CRITICAL)
+[✓] Build Docker ................................ PASA (imagen construida)
+[✓] Deploy a QA ................................. PASA (health check OK)
+
+--------------------------------------------------------------------------------
+SALIDA DE BANDIT TRAS LA REMEDIACIÓN
+--------------------------------------------------------------------------------
+Run metrics:
+    Total issues (by severity):
+        Undefined: 0
+        Low: 0
+        Medium: 0
+        High: 0
+
+    >> No issues identified.
+
+La consulta ahora usa parámetros (%s) en lugar de concatenar el valor del
+usuario, por lo que bandit ya no reporta el hallazgo B608 (CWE-89).
+
+--------------------------------------------------------------------------------
+CÓDIGO REMEDIADO (app/buscar_publicaciones.py)
+--------------------------------------------------------------------------------
+    consulta = (
+        "SELECT p.id, p.contenido, p.created_at "
+        "FROM posts p "
+        "JOIN users u ON p.user_id = u.id "
+        "WHERE u.username = %s "
+        "ORDER BY p.created_at DESC LIMIT 20"
+    )
+    cur.execute(consulta, (nombre_usuario,))   # parámetro seguro
+
+--------------------------------------------------------------------------------
+DEPLOY A QA
+--------------------------------------------------------------------------------
+=== Verificando salud ===
+{"estado": "ok"}
+Deploy QA exitoso
+
+Con el código remediado el pipeline pasa completo en verde y despliega a QA.
+Este es el código que posteriormente se promovió de forma manual y controlada
+a la instancia de Producción.
+================================================================================
