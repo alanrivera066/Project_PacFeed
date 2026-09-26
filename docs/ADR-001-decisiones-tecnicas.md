@@ -68,3 +68,27 @@ imagen Docker y despliegue por SSH a la instancia de QA.
 
 **Descartado:** Jenkins (requiere servidor dedicado), script bash como pipeline
 principal (no se dispara solo ni bloquea despliegues de forma automática).
+
+---
+
+### Ambientes: dos repositorios separados (QA/Desarrollo y Producción)
+
+Para la Entrega Final se separaron los ambientes en dos repositorios distintos:
+
+- **QA / Desarrollo** (`Project_PacFeed`): es donde se aplica el parche, corre el
+  pipeline completo con deploy automático a la instancia de QA, se detecta la
+  falla y se remedia. Aquí vive todo el historial del trabajo, incluidos los
+  commits del parche vulnerable y su corrección.
+- **Producción** (`Project_PacFeed_Prod`): repositorio nuevo que nace con el
+  código ya remediado y validado en verde. Su pipeline corre las cuatro etapas
+  de seguridad y el build, pero **no** hace deploy automático — el despliegue a
+  la instancia de Producción es manual y controlado. A este repo nunca llega el
+  parche vulnerable.
+
+Se eligió esta separación para reflejar un flujo real de promoción de código: QA
+es el ambiente de trabajo y validación, y a Producción solo se promueve lo que ya
+pasó los controles. Mantener repos separados deja una frontera clara entre "lo que
+se está probando" y "lo que está en producción".
+
+**Descartado:** un solo repositorio con ramas (más simple, pero no separa tan
+claramente los dos ambientes para fines de la entrega).

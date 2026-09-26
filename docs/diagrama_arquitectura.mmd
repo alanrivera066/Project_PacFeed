@@ -1,0 +1,63 @@
+flowchart TB
+    Usuario(["👤 Usuario<br/>navegador / curl"])
+
+    subgraph GH["🐙 GitHub"]
+        direction LR
+        RepoQA["📦 Repo QA / Desarrollo<br/><b>Project_PacFeed</b><br/>seguridad + build + deploy"]
+        RepoProd["📦 Repo Producción<br/><b>Project_PacFeed_Prod</b><br/>seguridad + build"]
+    end
+
+    subgraph Pipeline["⚙️ Pipeline · GitHub Actions"]
+        direction LR
+        P1["🔑 gitleaks<br/>secretos"]
+        P2["🏗️ checkov<br/>IaC"]
+        P3["🔒 bandit · SAST<br/>detecta SQLi"]
+        P4["📦 pip-audit<br/>dependencias"]
+    end
+
+    subgraph QA["🟠 EC2 t3.small · pacfeed-dev &nbsp;(QA · us-east-1a)"]
+        direction TB
+        APIQA["🐍 Flask API + Frontend<br/>contenedor api · puerto 5000"]
+        RedisQA["⚡ Redis 7.2<br/>caché del feed · 6379"]
+        APIQA -->|"feed cache"| RedisQA
+    end
+
+    subgraph PROD["🟢 EC2 t3.micro · pacfeed-prod &nbsp;(Producción · us-east-1a)"]
+        direction TB
+        APIPROD["🐍 Flask API + Frontend<br/>contenedor api · puerto 5000<br/><i>solo código remediado</i>"]
+        RedisPROD["⚡ Redis 7.2<br/>caché del feed · 6379"]
+        APIPROD -->|"feed cache"| RedisPROD
+    end
+
+    subgraph AWS["☁️ AWS us-east-1 · recursos compartidos"]
+        direction LR
+        RDS[("🗄️ RDS PostgreSQL 15<br/>db.t3.micro · cifrado<br/>sin acceso público<br/>SG: solo desde EC2")]
+        S3[("🪣 S3 · pacfeed-media<br/>privado · AES256<br/>fotos de perfil")]
+    end
+
+    Usuario -->|"HTTP :5000"| APIQA
+    Usuario -->|"HTTP :5000"| APIPROD
+
+    RepoQA --> Pipeline
+    RepoProd --> Pipeline
+    Pipeline ==>|"✅ deploy automático (verde)"| APIQA
+    Pipeline -.->|"✋ promoción manual (verde)"| APIPROD
+
+    APIQA -->|"usuarios · posts · follows<br/>likes · búsqueda"| RDS
+    APIQA -->|"foto de perfil"| S3
+    APIPROD -->|"usuarios · posts · follows<br/>likes · búsqueda"| RDS
+    APIPROD -->|"foto de perfil"| S3
+
+    classDef github fill:#ede9fe,stroke:#7c3aed,stroke-width:2px,color:#1e1b4b;
+    classDef pipe fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#0c4a6e;
+    classDef qa fill:#fff7ed,stroke:#ea580c,stroke-width:2px,color:#7c2d12;
+    classDef prod fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#14532d;
+    classDef aws fill:#fef9c3,stroke:#ca8a04,stroke-width:2px,color:#713f12;
+    classDef user fill:#f1f5f9,stroke:#475569,stroke-width:2px,color:#0f172a;
+
+    class RepoQA,RepoProd github;
+    class P1,P2,P3,P4 pipe;
+    class APIQA,RedisQA qa;
+    class APIPROD,RedisPROD prod;
+    class RDS,S3 aws;
+    class Usuario user;
