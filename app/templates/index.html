@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PacFeed</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #f0f2f5; color: #1c1e21; }
+
+    header {
+      background: #1877f2; color: white; padding: 12px 24px;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 100;
+    }
+    header h1 { font-size: 1.4rem; }
+    header span { font-size: 0.9rem; opacity: 0.85; }
+    button#btn-logout {
+      background: rgba(255,255,255,0.2); border: none; color: white;
+      padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 0.85rem;
+    }
+
+    .container { max-width: 600px; margin: 24px auto; padding: 0 12px; }
+
+    /* Auth */
+    #auth-section {
+      background: white; border-radius: 10px; padding: 28px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.12);
+    }
+    #auth-section h2 { margin-bottom: 18px; font-size: 1.1rem; }
+    #auth-section input {
+      width: 100%; padding: 10px 12px; margin-bottom: 12px;
+      border: 1px solid #ddd; border-radius: 6px; font-size: 0.95rem;
+    }
+    #auth-section button {
+      width: 100%; padding: 10px; border: none; border-radius: 6px;
+      font-size: 0.95rem; cursor: pointer; font-weight: 600;
+    }
+    #btn-login  { background: #1877f2; color: white; margin-bottom: 8px; }
+    #btn-register { background: #42b72a; color: white; }
+    #auth-msg { margin-top: 10px; font-size: 0.85rem; color: #e74c3c; }
+
+    /* App */
+    #app-section { display: none; }
+
+    .card {
+      background: white; border-radius: 10px; padding: 20px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.10); margin-bottom: 16px;
+    }
+    .card h3 { font-size: 1rem; margin-bottom: 12px; color: #444; }
+
+    textarea {
+      width: 100%; padding: 10px 12px; border: 1px solid #ddd;
+      border-radius: 6px; font-size: 0.9rem; resize: vertical; min-height: 70px;
+    }
+    .char-count { font-size: 0.78rem; color: #999; text-align: right; margin: 4px 0 8px; }
+
+    .btn-primary {
+      background: #1877f2; color: white; border: none;
+      padding: 8px 20px; border-radius: 6px; cursor: pointer;
+      font-size: 0.9rem; font-weight: 600;
+    }
+    .btn-primary:hover { background: #166fe5; }
+
+    /* Búsqueda */
+    .search-row { display: flex; gap: 8px; }
+    .search-row input {
+      flex: 1; padding: 8px 12px; border: 1px solid #ddd;
+      border-radius: 6px; font-size: 0.9rem;
+    }
+
+    /* Feed */
+    .post-item {
+      border-bottom: 1px solid #f0f2f5; padding: 14px 0;
+    }
+    .post-item:last-child { border-bottom: none; }
+    .post-user { font-weight: 700; font-size: 0.9rem; color: #1877f2; }
+    .post-content { margin: 6px 0; font-size: 0.95rem; line-height: 1.45; }
+    .post-date { font-size: 0.75rem; color: #999; }
+
+    #feed-empty { color: #999; font-size: 0.9rem; text-align: center; padding: 20px 0; }
+
+    .tag-new {
+      display: inline-block; background: #e8f4fd; color: #1877f2;
+      font-size: 0.7rem; padding: 2px 7px; border-radius: 10px;
+      margin-left: 6px; vertical-align: middle; font-weight: 600;
+    }
+
+    #status-msg {
+      font-size: 0.82rem; padding: 6px 0; min-height: 22px;
+    }
+    .ok  { color: #27ae60; }
+    .err { color: #e74c3c; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🐾 PacFeed</h1>
+  <span id="header-user"></span>
+  <button id="btn-logout" style="display:none" onclick="logout()">Salir</button>
+</header>
+
+<!-- AUTH -->
+<div class="container" id="auth-section">
+  <div class="card">
+    <h2>Iniciar sesión / Registrarse</h2>
+    <input id="inp-username" type="text" placeholder="Usuario" autocomplete="username" />
+    <input id="inp-password" type="password" placeholder="Contraseña" autocomplete="current-password" />
+    <button id="btn-login" onclick="doLogin()">Iniciar sesión</button>
+    <button id="btn-register" onclick="doRegister()">Registrarse</button>
+    <div id="auth-msg"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="container" id="app-section">
+
+  <!-- Publicar -->
+  <div class="card">
+    <h3>✏️ Nueva publicación</h3>
+    <textarea id="inp-post" placeholder="¿Qué está pasando? (máx. 280 caracteres)"
+      oninput="updateCount(this)"></textarea>
+    <div class="char-count"><span id="char-count">0</span>/280</div>
+    <button class="btn-primary" onclick="crearPost()">Publicar</button>
+    <div id="status-msg"></div>
+  </div>
+
+  <!-- Búsqueda (parche nuevo) -->
+  <div class="card">
+    <h3>🔍 Buscar publicaciones por usuario <span class="tag-new">NUEVO</span></h3>
+    <div class="search-row">
+      <input id="inp-buscar" type="text" placeholder="Nombre de usuario..." />
+      <button class="btn-primary" onclick="buscarPublicaciones()">Buscar</button>
+    </div>
+    <div id="buscar-resultado" style="margin-top:14px;"></div>
+  </div>
+
+  <!-- Feed -->
+  <div class="card">
+    <h3>📰 Mi feed</h3>
+    <button class="btn-primary" onclick="cargarFeed()" style="margin-bottom:14px;">Actualizar feed</button>
+    <div id="feed-container"><div id="feed-empty">Carga el feed para ver publicaciones.</div></div>
+  </div>
+
+  <!-- Seguir usuario -->
+  <div class="card">
+    <h3>➕ Seguir usuario</h3>
+    <div class="search-row">
+      <input id="inp-follow-id" type="number" placeholder="ID de usuario a seguir" />
+      <button class="btn-primary" onclick="seguirUsuario()">Seguir</button>
+    </div>
+    <div id="follow-msg" style="margin-top:8px;font-size:0.85rem;"></div>
+  </div>
+
+</div>
+
+<script>
+  const API = '';  // mismo origen
+  let currentUserId = null;
+
+  // ── Auth ──────────────────────────────────────────────────────────────────
+  async function doLogin() {
+    const username = document.getElementById('inp-username').value.trim();
+    const password = document.getElementById('inp-password').value;
+    if (!username || !password) { setAuthMsg('Completa usuario y contraseña.'); return; }
+
+    const res = await fetch(`${API}/login`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({username, password})
+    });
+    const data = await res.json();
+    if (res.ok) {
+      currentUserId = data.user_id;
+      enterApp(username);
+    } else {
+      setAuthMsg(data.error || 'Error al iniciar sesión.');
+    }
+  }
+
+  async function doRegister() {
+    const username = document.getElementById('inp-username').value.trim();
+    const password = document.getElementById('inp-password').value;
+    if (!username || !password) { setAuthMsg('Completa usuario y contraseña.'); return; }
+
+    const res = await fetch(`${API}/registro`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({username, password})
+    });
+    const data = await res.json();
+    if (res.ok) {
+      currentUserId = data.user_id;
+      enterApp(username);
+    } else {
+      setAuthMsg(data.error || 'Error al registrarse.');
+    }
+  }
+
+  function enterApp(username) {
+    document.getElementById('auth-section').style.display = 'none';
+    document.getElementById('app-section').style.display = 'block';
+    document.getElementById('header-user').textContent = `👤 ${username} (ID: ${currentUserId})`;
+    document.getElementById('btn-logout').style.display = 'inline-block';
+  }
+
+  function logout() {
+    currentUserId = null;
+    document.getElementById('auth-section').style.display = 'block';
+    document.getElementById('app-section').style.display = 'none';
+    document.getElementById('btn-logout').style.display = 'none';
+    document.getElementById('header-user').textContent = '';
+    document.getElementById('inp-username').value = '';
+    document.getElementById('inp-password').value = '';
+    setAuthMsg('');
+  }
+
+  function setAuthMsg(msg) {
+    document.getElementById('auth-msg').textContent = msg;
+  }
+
+  // ── Post ──────────────────────────────────────────────────────────────────
+  function updateCount(el) {
+    document.getElementById('char-count').textContent = el.value.length;
+  }
+
+  async function crearPost() {
+    const contenido = document.getElementById('inp-post').value.trim();
+    if (!contenido) { setStatus('Escribe algo primero.', false); return; }
+
+    const res = await fetch(`${API}/posts`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-User-Id': currentUserId},
+      body: JSON.stringify({contenido})
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setStatus(`✅ Publicación creada (ID: ${data.post_id})`, true);
+      document.getElementById('inp-post').value = '';
+      document.getElementById('char-count').textContent = '0';
+    } else {
+      setStatus(data.error || 'Error al publicar.', false);
+    }
+  }
+
+  // ── Feed ──────────────────────────────────────────────────────────────────
+  async function cargarFeed() {
+    const res = await fetch(`${API}/feed`, {
+      headers: {'X-User-Id': currentUserId}
+    });
+    const data = await res.json();
+    const container = document.getElementById('feed-container');
+    if (!res.ok) { container.innerHTML = `<p class="err">${data.error}</p>`; return; }
+
+    if (!data.feed || data.feed.length === 0) {
+      container.innerHTML = '<div id="feed-empty">Sin publicaciones. Sigue a alguien primero.</div>';
+      return;
+    }
+    container.innerHTML = data.feed.map(p => `
+      <div class="post-item">
+        <span class="post-user">@${p.username}</span>
+        <p class="post-content">${escapeHtml(p.contenido)}</p>
+        <span class="post-date">${p.created_at}</span>
+      </div>
+    `).join('');
+  }
+
+  // ── Búsqueda (endpoint del parche) ────────────────────────────────────────
+  async function buscarPublicaciones() {
+    const usuario = document.getElementById('inp-buscar').value.trim();
+    const container = document.getElementById('buscar-resultado');
+    if (!usuario) { container.innerHTML = '<span class="err">Ingresa un nombre de usuario.</span>'; return; }
+
+    const res = await fetch(`${API}/publicaciones/buscar?usuario=${encodeURIComponent(usuario)}`, {
+      headers: {'X-User-Id': currentUserId}
+    });
+    const data = await res.json();
+    if (!res.ok) { container.innerHTML = `<span class="err">${data.error || 'Error en búsqueda.'}</span>`; return; }
+
+    if (!data.publicaciones || data.publicaciones.length === 0) {
+      container.innerHTML = '<span style="color:#999;font-size:.88rem">Sin resultados para ese usuario.</span>';
+      return;
+    }
+    container.innerHTML = data.publicaciones.map(p => `
+      <div class="post-item">
+        <p class="post-content">${escapeHtml(p.contenido)}</p>
+        <span class="post-date">${p.fecha_creacion}</span>
+      </div>
+    `).join('');
+  }
+
+  // ── Seguir ────────────────────────────────────────────────────────────────
+  async function seguirUsuario() {
+    const followId = document.getElementById('inp-follow-id').value;
+    if (!followId) return;
+    const res = await fetch(`${API}/follow/${followId}`, {
+      method: 'POST',
+      headers: {'X-User-Id': currentUserId}
+    });
+    const data = await res.json();
+    const msg = document.getElementById('follow-msg');
+    if (res.ok) {
+      msg.className = 'ok'; msg.textContent = '✅ Ahora sigues a ese usuario.';
+    } else {
+      msg.className = 'err'; msg.textContent = data.error || 'Error.';
+    }
+  }
+
+  // ── Utils ─────────────────────────────────────────────────────────────────
+  function setStatus(msg, ok) {
+    const el = document.getElementById('status-msg');
+    el.className = ok ? 'ok' : 'err';
+    el.textContent = msg;
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+              .replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+  }
+</script>
+</body>
+</html>

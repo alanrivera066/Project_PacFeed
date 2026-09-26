@@ -4,7 +4,7 @@ import json
 import boto3
 import psycopg2
 import redis
-from flask import Flask, request, jsonify, g
+from flask import Flask, request, jsonify, g, render_template
 from functools import wraps
 
 app = Flask(__name__)
@@ -120,6 +120,11 @@ def hash_password(password):
 @app.route("/salud")
 def salud():
     return jsonify({"estado": "ok"}), 200
+
+
+@app.route("/")
+def index():
+    return render_template("index.html")
 
 
 @app.route("/registro", methods=["POST"])
@@ -291,6 +296,14 @@ def subir_foto():
     db.commit()
     cur.close()
     return jsonify({"s3_key": key}), 200
+
+
+# ---------------------------------------------------------------------------
+# Blueprints
+# ---------------------------------------------------------------------------
+
+from buscar_publicaciones import buscar_bp
+app.register_blueprint(buscar_bp)
 
 
 # ---------------------------------------------------------------------------

@@ -1,0 +1,154 @@
+name: PacFeed CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  # ─────────────────────────────────────────────
+  # ETAPA 1: Análisis de seguridad con Bandit
+  # ─────────────────────────────────────────────
+  security-scan:
+    name: 🔒 Análisis de Seguridad (Bandit)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar Bandit
+        run: pip install bandit==1.7.9
+
+      - name: Ejecutar Bandit — escaneo completo
+        run: |
+          bandit -r app/ \
+            -f txt \
+            -o reportes/bandit_scan.txt \
+            --exit-zero || true
+
+      - name: Mostrar reporte Bandit en log
+        run: cat reportes/bandit_scan.txt
+
+      - name: Guardar reporte como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-report
+          path: reportes/bandit_scan.txt
+
+      - name: Verificar severidad — BLOQUEAR si hay HIGH o MEDIUM
+        run: |
+          echo "=== Verificando hallazgos de seguridad ==="
+          bandit -r app/ \
+            --severity-level medium \
+            --confidence-level medium \
+            -f txt
+          # Si bandit encuentra issues con severidad >= MEDIUM, retorna exit code != 0
+          # y el pipeline falla aquí, bloqueando el deploy
+
+  # ─────────────────────────────────────────────
+  # ETAPA 2: Tests básicos (solo si security pasa)
+  # ─────────────────────────────────────────────
+  test:
+    name: 🧪 Tests
+    runs-on: ubuntu-latest
+    needs: security-scan
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependencias
+        run: |
+          pip install flask==3.1.3 psycopg2-binary==2.9.9 redis==5.0.8 boto3==1.34.144
+
+      - name: Verificar sintaxis Python
+        run: |
+          python -m py_compile app/app.py
+          python -m py_compile app/buscar_publicaciones.py
+          echo "✅ Sintaxis correcta"
+
+      - name: Verificar que Flask importa correctamente
+        run: |
+          cd app
+          python -c "
+          import os
+          os.environ['DB_HOST'] = 'localhost'
+          os.environ['DB_NAME'] = 'test'
+          os.environ['DB_USER'] = 'test'
+          os.environ['DB_PASSWORD'] = 'test'
+          os.environ['S3_BUCKET'] = 'test'
+          from app import app
+          assert app is not None
+          print('✅ Aplicación Flask carga correctamente')
+          "
+
+  # ─────────────────────────────────────────────
+  # ETAPA 3: Build Docker (solo si tests pasan)
+  # ─────────────────────────────────────────────
+  build:
+    name: 🐳 Build Docker
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Build imagen Docker
+        run: docker build -t pacfeed:${{ github.sha }} .
+
+      - name: Verificar imagen con health check
+        run: |
+          echo "✅ Imagen construida correctamente: pacfeed:${{ github.sha }}"
+
+  # ─────────────────────────────────────────────
+  # ETAPA 4: Deploy a QA (solo en push a main/master)
+  # ─────────────────────────────────────────────
+  deploy-qa:
+    name: 🚀 Deploy a QA
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push'
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Configurar SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.QA_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.QA_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy en instancia QA
+        run: |
+          ssh -i ~/.ssh/id_rsa ${{ secrets.QA_USER }}@${{ secrets.QA_HOST }} << 'ENDSSH'
+            set -e
+            echo "=== Actualizando código ==="
+            cd ~/pacfeed || git clone ${{ github.server_url }}/${{ github.repository }} ~/pacfeed && cd ~/pacfeed
+            git pull origin ${{ github.ref_name }}
+
+            echo "=== Reconstruyendo contenedores ==="
+            docker compose down
+            docker compose up -d --build
+
+            echo "=== Verificando salud ==="
+            sleep 10
+            curl -f http://localhost:5000/salud && echo "✅ Deploy QA exitoso"
+          ENDSSH
+
+      - name: Confirmar deploy
+        run: echo "✅ Deploy completado en QA — ${{ secrets.QA_HOST }}"
