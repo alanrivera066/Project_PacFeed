@@ -1,8 +1,15 @@
 # Tabla de decisiones del pipeline — PacFeed
 
+## Dónde corre
+
+El pipeline está implementado en **GitHub Actions** (`.github/workflows/pipeline.yml`)
+y se dispara automáticamente en cada push a `main`. Las cuatro etapas de seguridad
+descritas abajo se ejecutan como jobs independientes; si cualquiera falla, el deploy
+queda bloqueado.
+
 ## Lógica de veredicto
 
-El pipeline corre 4 etapas en secuencia. Si cualquiera falla, el veredicto es BLOQUEA. Solo si las 4 pasan el veredicto es PERMITE. Esto es así porque cada control cubre una posible brecha de seguridad que se tiene que arreglar de inmediato antes de comprometer la seguridad u operatividad de la aplicación.
+El pipeline corre 4 etapas de seguridad. Si cualquiera falla, el veredicto es BLOQUEA y no se despliega. Solo si las 4 pasan continúa a las etapas de build (imagen Docker) y deploy (SSH a la instancia de QA) — el veredicto PERMITE. Esto es así porque cada control cubre una posible brecha de seguridad que se tiene que arreglar de inmediato antes de comprometer la seguridad u operatividad de la aplicación.
 
 ---
 
@@ -36,9 +43,9 @@ El pipeline corre 4 etapas en secuencia. Si cualquiera falla, el veredicto es BL
 | Campo | Detalle |
 |-------|---------|
 | **Herramienta** | bandit |
-| **Umbral** | Cero hallazgos de severidad HIGH con confianza HIGH |
+| **Umbral** | Bloquea con hallazgos de severidad MEDIUM o superior (cualquier nivel de confianza) |
 | **Riesgo concreto de PacFeed** | Bandit ayuda a detectar si no se está limitando correctamente la entrada de datos del usuario. Si no se controla, un atacante podría realizar ataques de inyección SQL a través del contenido de los posts o el username. |
-| **Por qué este umbral** | Se filtran solo hallazgos HIGH/HIGH para no bloquear por advertencias de baja severidad que no representan un riesgo real en este contexto. |
+| **Por qué este umbral** | El parche de la funcionalidad de búsqueda introdujo una inyección SQL (B608, CWE-89) que Bandit reporta con severidad MEDIUM y confianza *Low*. Para no dejarla pasar, el umbral de confianza se bajó a `low`, de modo que cualquier hallazgo MEDIUM o superior bloquee el despliegue. Este ajuste fue clave para que el pipeline detuviera el parche vulnerable en la Entrega Final. |
 
 ---
 
@@ -59,3 +66,16 @@ El pipeline corre 4 etapas en secuencia. Si cualquiera falla, el veredicto es BL
 |--------------------|-------|
 | **Análisis de imagen Docker (trivy)** | Docker Hub tiene un proceso de revisión en las imágenes oficiales, por lo que el riesgo real para este proyecto es bajo. |
 | **DAST (pruebas dinámicas)** | Requiere tener infraestructura extra levantada solo para las pruebas, lo cual no es necesario para este avance. |
+
+---
+
+## Etapas de entrega (build y deploy)
+
+Cuando las 4 etapas de seguridad pasan, el pipeline continúa con dos etapas de entrega:
+
+| Etapa | Qué hace |
+|-------|----------|
+| **Build (Docker)** | Construye la imagen de la aplicación con el `Dockerfile` para verificar que el código empaqueta correctamente antes de desplegar. |
+| **Deploy a QA** | Se conecta por SSH a la instancia EC2 de QA, actualiza el código (`git pull`), reconstruye los contenedores con `docker compose` y verifica el health check en `/salud`. Solo corre en push a `main`. |
+
+La promoción a **Producción** se hace de forma manual y controlada: solo se despliega en la instancia de Producción el código que ya pasó el pipeline completo en verde. El parche vulnerable nunca llega a Producción.

@@ -20,11 +20,26 @@ cp .env.example .env
 # Editar .env con los valores reales
 
 # 3. Levantar
-docker-compose up -d
+docker compose up -d
 
 # 4. Verificar
 curl http://localhost:5000/salud
 ```
+
+## Interfaz web
+
+La aplicación incluye un frontend simple servido por Flask en la raíz (`/`).
+Permite registrarse, iniciar sesión, publicar, ver el feed, seguir usuarios y
+buscar publicaciones por nombre de usuario. Abre `http://<host>:5000/` en el
+navegador.
+
+## Pipeline CI/CD
+
+El repositorio incluye un pipeline en **GitHub Actions**
+(`.github/workflows/pipeline.yml`) que corre en cada push: cuatro etapas de
+seguridad (gitleaks, checkov, bandit, pip-audit), build de la imagen Docker y
+deploy automático por SSH a la instancia de QA. Ver `docs/tabla_decisiones_pipeline.md`
+para el detalle de cada control.
 
 ## Servicios de AWS
 
@@ -46,6 +61,8 @@ curl http://localhost:5000/salud
 | POST | `/follow/<id>` | Seguir usuario (header: X-User-Id) |
 | POST | `/like/<post_id>` | Dar like (header: X-User-Id) |
 | POST | `/perfil/foto` | Subir foto a S3 (header: X-User-Id) |
+| GET | `/publicaciones/buscar?usuario=...` | Buscar publicaciones por nombre de usuario |
+| GET | `/` | Interfaz web (frontend) |
 
 ## Autenticación
 

@@ -52,8 +52,19 @@ Terraform es la herramienta usada en el curso y tiene mejor soporte en el pipeli
 
 ---
 
-### Pipeline: script bash (no Jenkins ni GitHub Actions)
+### Pipeline: GitHub Actions (no script bash ni Jenkins)
 
-Se decidió utilizar un script bash para generar las corridas roja y verde y posteriormente guardarlas en la carpeta de reportes, antes que instalar Jenkins u otro servidor para manejar el pipeline. Se mantiene la simplicidad sin necesidad de infraestructura adicional.
+Para la Entrega Final el pipeline se migró a GitHub Actions. En el Avance 2 se
+había usado un script bash local (`pipeline/pipeline.sh`) para generar las
+corridas roja y verde; ese script se conserva en el repositorio como referencia
+histórica, pero el pipeline que realmente controla los despliegues ahora vive en
+`.github/workflows/pipeline.yml` y se dispara automáticamente en cada push.
 
-**Descartado:** Jenkins, GitHub Actions.
+Se eligió GitHub Actions sobre Jenkins porque no requiere levantar ni mantener un
+servidor aparte (Jenkins consumiría recursos del Learner Lab), se integra directo
+con el repositorio y ejecuta las mismas cuatro etapas de seguridad del bash
+original —gitleaks, checkov, bandit y pip-audit— más las etapas de build de la
+imagen Docker y despliegue por SSH a la instancia de QA.
+
+**Descartado:** Jenkins (requiere servidor dedicado), script bash como pipeline
+principal (no se dispara solo ni bloquea despliegues de forma automática).

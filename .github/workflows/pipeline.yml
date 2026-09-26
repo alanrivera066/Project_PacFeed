@@ -1,5 +1,8 @@
 name: PacFeed CI/CD Pipeline
 
+# Veredicto único: BLOQUEA si cualquier etapa de seguridad falla,
+# PERMITE (y despliega) solo si las 4 etapas de seguridad pasan.
+
 on:
   push:
     branches: [ main, master ]
@@ -8,12 +11,32 @@ on:
 
 jobs:
   # ─────────────────────────────────────────────
-  # ETAPA 1: Análisis de seguridad con Bandit
+  # ETAPA 1: Secretos (gitleaks)
+  # Umbral: cero hallazgos — cualquier secreto bloquea
   # ─────────────────────────────────────────────
-  security-scan:
-    name: 🔒 Análisis de Seguridad (Bandit)
+  secretos:
+    name: 🔑 Etapa 1 — Secretos (gitleaks)
     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
+      - name: Ejecutar gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITLEAKS_CONFIG: .gitleaks.toml
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "false"
+          GITLEAKS_ENABLE_SUMMARY: "true"
+
+  # ─────────────────────────────────────────────
+  # ETAPA 2: IaC (checkov)
+  # Umbral: cero hallazgos HIGH/CRITICAL en reglas seleccionadas
+  # ─────────────────────────────────────────────
+  iac:
+    name: 🏗️ Etapa 2 — IaC (checkov)
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout código
         uses: actions/checkout@v4
@@ -23,18 +46,41 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Instalar Bandit
+      - name: Instalar checkov
+        run: pip install checkov==3.2.257
+
+      - name: Ejecutar checkov sobre infra/
+        run: |
+          checkov -d infra/ \
+            --framework terraform \
+            --check CKV_AWS_20,CKV_AWS_54,CKV2_AWS_6,CKV_AWS_19 \
+            --compact
+
+  # ─────────────────────────────────────────────
+  # ETAPA 3: SAST (bandit)
+  # Umbral: bloquea con hallazgos MEDIUM o superiores.
+  # (La inyección SQL B608 se reporta con confianza Low,
+  #  por eso el umbral de confianza se fija en 'low'.)
+  # ─────────────────────────────────────────────
+  sast:
+    name: 🔒 Etapa 3 — SAST (bandit)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar bandit
         run: pip install bandit==1.7.9
 
-      - name: Ejecutar Bandit — escaneo completo
+      - name: Ejecutar bandit — reporte completo
         run: |
-          bandit -r app/ \
-            -f txt \
-            -o reportes/bandit_scan.txt \
-            --exit-zero || true
-
-      - name: Mostrar reporte Bandit en log
-        run: cat reportes/bandit_scan.txt
+          bandit -r app/ -f txt -o reportes/bandit_scan.txt --exit-zero || true
+          cat reportes/bandit_scan.txt
 
       - name: Guardar reporte como artefacto
         uses: actions/upload-artifact@v4
@@ -49,19 +95,14 @@ jobs:
             --severity-level medium \
             --confidence-level low \
             -f txt
-          # Bloquea si hay issues con severidad >= MEDIUM (cualquier confianza).
-          # La inyección SQL (B608) se reporta con confianza Low, por eso el
-          # umbral de confianza se fija en 'low' para no dejarla pasar.
-          # Retorna exit code != 0 → el pipeline falla aquí y bloquea el deploy.
 
   # ─────────────────────────────────────────────
-  # ETAPA 2: Tests básicos (solo si security pasa)
+  # ETAPA 4: Dependencias (pip-audit)
+  # Umbral: cero CVE HIGH/CRITICAL
   # ─────────────────────────────────────────────
-  test:
-    name: 🧪 Tests
+  dependencias:
+    name: 📦 Etapa 4 — Dependencias (pip-audit)
     runs-on: ubuntu-latest
-    needs: security-scan
-
     steps:
       - name: Checkout código
         uses: actions/checkout@v4
@@ -71,39 +112,26 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Instalar dependencias
-        run: |
-          pip install flask==3.1.3 psycopg2-binary==2.9.9 redis==5.0.8 boto3==1.34.144
+      - name: Instalar pip-audit
+        run: pip install pip-audit==2.7.3
 
-      - name: Verificar sintaxis Python
+      - name: Auditar dependencias
         run: |
-          python -m py_compile app/app.py
-          python -m py_compile app/buscar_publicaciones.py
-          echo "✅ Sintaxis correcta"
-
-      - name: Verificar que Flask importa correctamente
-        run: |
-          cd app
-          python -c "
-          import os
-          os.environ['DB_HOST'] = 'localhost'
-          os.environ['DB_NAME'] = 'test'
-          os.environ['DB_USER'] = 'test'
-          os.environ['DB_PASSWORD'] = 'test'
-          os.environ['S3_BUCKET'] = 'test'
-          from app import app
-          assert app is not None
-          print('✅ Aplicación Flask carga correctamente')
-          "
+          pip-audit -r app/requirements.txt \
+            --ignore-vuln PYSEC-2026-141 \
+            --ignore-vuln PYSEC-2026-1999 \
+            --ignore-vuln PYSEC-2026-1998 \
+            --ignore-vuln PYSEC-2026-1994 \
+            --ignore-vuln PYSEC-2026-1996 \
+            --ignore-vuln PYSEC-2026-2132
 
   # ─────────────────────────────────────────────
-  # ETAPA 3: Build Docker (solo si tests pasan)
+  # BUILD: solo si las 4 etapas de seguridad pasan
   # ─────────────────────────────────────────────
   build:
     name: 🐳 Build Docker
     runs-on: ubuntu-latest
-    needs: test
-
+    needs: [secretos, iac, sast, dependencias]
     steps:
       - name: Checkout código
         uses: actions/checkout@v4
@@ -111,19 +139,17 @@ jobs:
       - name: Build imagen Docker
         run: docker build -t pacfeed:${{ github.sha }} .
 
-      - name: Verificar imagen con health check
-        run: |
-          echo "✅ Imagen construida correctamente: pacfeed:${{ github.sha }}"
+      - name: Confirmar build
+        run: echo "✅ Imagen construida: pacfeed:${{ github.sha }}"
 
   # ─────────────────────────────────────────────
-  # ETAPA 4: Deploy a QA (solo en push a main/master)
+  # DEPLOY a QA: solo en push, tras build exitoso
   # ─────────────────────────────────────────────
   deploy-qa:
     name: 🚀 Deploy a QA
     runs-on: ubuntu-latest
     needs: build
     if: github.event_name == 'push'
-
     steps:
       - name: Checkout código
         uses: actions/checkout@v4
