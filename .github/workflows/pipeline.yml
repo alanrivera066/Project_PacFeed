@@ -42,15 +42,17 @@ jobs:
           name: bandit-report
           path: reportes/bandit_scan.txt
 
-      - name: Verificar severidad — BLOQUEAR si hay HIGH o MEDIUM
+      - name: Verificar severidad — BLOQUEAR si hay hallazgos MEDIUM o superiores
         run: |
           echo "=== Verificando hallazgos de seguridad ==="
           bandit -r app/ \
             --severity-level medium \
-            --confidence-level medium \
+            --confidence-level low \
             -f txt
-          # Si bandit encuentra issues con severidad >= MEDIUM, retorna exit code != 0
-          # y el pipeline falla aquí, bloqueando el deploy
+          # Bloquea si hay issues con severidad >= MEDIUM (cualquier confianza).
+          # La inyección SQL (B608) se reporta con confianza Low, por eso el
+          # umbral de confianza se fija en 'low' para no dejarla pasar.
+          # Retorna exit code != 0 → el pipeline falla aquí y bloquea el deploy.
 
   # ─────────────────────────────────────────────
   # ETAPA 2: Tests básicos (solo si security pasa)

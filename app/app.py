@@ -312,4 +312,7 @@ app.register_blueprint(buscar_bp)
 
 if __name__ == "__main__":
     init_db()
-    app.run(host="0.0.0.0", port=5000)
+    # nosec B104 - Falso positivo: el bind a 0.0.0.0 es intencional y necesario
+    # porque la app corre dentro de un contenedor Docker; la exposición real se
+    # controla con el mapeo de puertos de docker-compose y el Security Group de EC2.
+    app.run(host="0.0.0.0", port=5000)  # nosec B104
