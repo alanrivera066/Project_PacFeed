@@ -43,10 +43,14 @@ def buscar_por_usuario():
 
     # REMEDIACION: consulta parametrizada - el valor nunca se interpola
     # directamente en el string SQL. psycopg2 lo envia como dato separado.
+    # Se busca en la tabla 'posts' uniendo con 'users' para filtrar por el
+    # nombre de usuario (username), que es el esquema real de la aplicacion.
     consulta = (
-        "SELECT id, contenido, fecha_creacion FROM publicaciones "
-        "WHERE usuario = %s "
-        "ORDER BY fecha_creacion DESC LIMIT 20"
+        "SELECT p.id, p.contenido, p.created_at "
+        "FROM posts p "
+        "JOIN users u ON p.user_id = u.id "
+        "WHERE u.username = %s "
+        "ORDER BY p.created_at DESC LIMIT 20"
     )
 
     conexion = obtener_conexion()
